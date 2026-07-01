@@ -2,7 +2,7 @@ import random
 import os
 import sys
 
-# Поддержка raw-ввода для Linux/Unix
+# Поддержка raw-ввода для Linux
 try:
     import tty
     import termios
@@ -12,7 +12,7 @@ try:
         try:
             tty.setraw(fd)
             ch = sys.stdin.read(1)
-            if ch == '\x1b':  # Обработка escape-последовательностей (стрелочки)
+            if ch == '\x1b':
                 ch2 = sys.stdin.read(1)
                 if ch2 == '[':
                     ch3 = sys.stdin.read(1)
@@ -24,7 +24,6 @@ try:
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 except ImportError:
-    # Фоллбек для Windows на всякий случай
     import msvcrt
     def get_key():
         ch = msvcrt.getch()
@@ -38,18 +37,18 @@ except ImportError:
         if ch in ('\r', '\n'): return 'enter'
         return ch
 
-# Настройки игры
 HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF']
 GRID_SIZE = 5
 BUFFER_SIZE = 6
 
-# Кроваво-красная палитра (Cyberpunk / Arasaka NetSec)
+# Палитра Arasaka NetSec (Красная тревога + Зеленый успех)
 C_RESET = '\033[0m'
-C_RED = '\033[91m'       # Яркий красный (активные элементы)
-C_DARK_RED = '\033[31m'  # Темно-красный (фон матрицы)
-C_CURSOR = '\033[41m\033[97m\033[1m'  # Белый текст на красном фоне (курсор)
-C_USED = '\033[90m'      # Серый (взломанные ячейки)
-C_WHITE = '\033[97m'     # Чистый белый
+C_RED = '\033[91m'       # Активные элементы / опасный интерфейс
+C_DARK_RED = '\033[31m'  # Матрица по умолчанию
+C_GREEN = '\033[92m'     # Успешно загруженные демоны
+C_WHITE = '\033[97m'     # Накопленный прогресс / совпадения
+C_USED = '\033[90m'      # Мертвые/использованные ноды
+C_CURSOR = '\033[41m\033[97m\033[1m' # Курсор
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
@@ -61,6 +60,30 @@ def generate_targets():
         "БЕКДОР СЕТИ": [random.choice(HEX_CODES) for _ in range(4)]
     }
 
+def get_target_status(buffer, seq):
+    """Вычисляет состояние демона на основе текущего буфера"""
+    buf_str = " ".join(buffer)
+    seq_str = " ".join(seq)
+    
+    # Полное совпадение
+    if seq_str in buf_str:
+        return 'COMPLETED', len(seq)
+        
+    # Ищем максимальное частичное совпадение (конец буфера совпадает с началом демона)
+    overlap = 0
+    for k in range(len(seq), 0, -1):
+        if len(buffer) >= k and buffer[-k:] == seq[:k]:
+            overlap = k
+            break
+            
+    # Проверяем, реально ли еще успеть дописать демона в буфер
+    remaining_space = BUFFER_SIZE - len(buffer)
+    # Не хватает места продолжить текущий трек И не хватает места начать его с нуля
+    if (len(seq) - overlap > remaining_space) and (len(seq) > remaining_space):
+        return 'FAILED', 0
+        
+    return 'IN_PROGRESS', overlap
+
 def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, message=""):
     clear_screen()
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
@@ -69,7 +92,32 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
 
     print(f"{C_WHITE}ДЕМОНЫ В СЕТИ:{C_RESET}")
     for name, seq in targets.items():
-        print(f"  {name:<15} ->  {C_RED}{' '.join(seq)}{C_RESET}")
+        status, overlap = get_target_status(buffer, seq)
+        
+        # Рендеринг цепочки кодов демона с учетом прогресса
+        rendered_seq = []
+        for i, code in enumerate(seq):
+            if status == 'COMPLETED':
+                rendered_seq.append(f"{C_GREEN}{code}{C_RESET}")
+            elif status == 'FAILED':
+                rendered_seq.append(f"{C_USED}{code}{C_RESET}")
+            else:
+                if i < overlap:
+                    rendered_seq.append(f"{C_WHITE}{code}{C_RESET}")  # Текущая цепочка совпадения
+                else:
+                    rendered_seq.append(f"{C_RED}{code}{C_RESET}")
+                    
+        # Статусный тег справа
+        if status == 'COMPLETED':
+            status_tag = f" {C_GREEN}[ ЗАГРУЖЕН ]{C_RESET}"
+        elif status == 'FAILED':
+            status_tag = f" {C_USED}[ СБОЙ СВЯЗИ ]{C_RESET}"
+        elif overlap > 0:
+            status_tag = f" {C_WHITE}[ СИНХР. {overlap}/{len(seq)} ]{C_RESET}"
+        else:
+            status_tag = ""
+
+        print(f"  {name:<15} ->  {' '.join(rendered_seq)}{status_tag}")
     print()
 
     # Рендеринг буфера
@@ -79,21 +127,16 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
             buf_display.append(f"{C_WHITE}{buffer[i]}{C_RESET}")
         else:
             buf_display.append(f"{C_DARK_RED}[..]{C_RESET}")
-    print(f"{C_WHITE}БУФЕР ХЭКЕРА:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{BUFFER_SIZE})\n")
+    print(f"{C_WHITE}БУФЕР РЕГИСТРОВ:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{BUFFER_SIZE})\n")
 
     print(f"{C_WHITE}МАТРИЦА ДАННЫХ:{C_RESET}")
-    
     for r in range(GRID_SIZE):
         row_str = []
         for c in range(GRID_SIZE):
             cell = matrix[r][c]
             is_used = (r, c) in used
-            
-            # Логика наведения курсора
             is_cursor = (mode == 'row' and r == active_idx and c == cursor_pos) or \
                         (mode == 'col' and c == active_idx and r == cursor_pos)
-            
-            # Принадлежность к текущей рабочей линии
             is_active_line = (mode == 'row' and r == active_idx) or (mode == 'col' and c == active_idx)
 
             if is_cursor:
@@ -105,20 +148,14 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
             else:
                 row_str.append(f"{C_DARK_RED}{cell}{C_RESET}")
 
-        # Небольшой указатель текущей активной строки
         prefix = f"{C_RED}» {C_RESET}" if mode == 'row' and r == active_idx else "  "
         print(prefix + "  ".join(row_str))
         
-    print(f"\n{C_DARK_RED}{message}{C_RESET}")
-    print(f"{C_USED}[Стрелочки / HJKL] - Перемещение | [Space / Enter] - Выбор | [Q] - Выход{C_RESET}")
-
-def check_targets(buffer, targets):
-    completed = []
-    buf_str = " ".join(buffer)
-    for name, seq in targets.items():
-        if " ".join(seq) in buf_str:
-            completed.append(name)
-    return completed
+    if message:
+        print(f"\n{C_RED}{message}{C_RESET}")
+    else:
+        print("\n")
+    print(f"{C_USED}[Стрелочки / HJKL] - Навигация | [Space / Enter] - Выбрать код | [Q] - Выход{C_RESET}")
 
 def main():
     matrix = [[random.choice(HEX_CODES) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
@@ -126,72 +163,67 @@ def main():
     used = set()
     buffer = []
 
-    mode = 'row'       # Начинаем традиционно с выбора в строке
-    active_idx = 0     # Первая строка активна
-    cursor_pos = 0     # Позиция курсора на активной линии (сейчас это колонка 0)
-    msg = "СОЕДИНЕНИЕ УСТАНОВЛЕНО. Выберите стартовый код в верхней строке."
+    mode = 'row'
+    active_idx = 0
+    cursor_pos = 0
+    msg = "СЕТЬ СТАБИЛЬНА. Выберите стартовый код в верхней строке."
 
     while True:
         print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, msg)
         msg = ""
 
-        # Проверка условий победы/луза
-        completed = check_targets(buffer, targets)
+        # Считаем статусы на текущий шаг
+        target_states = {name: get_target_status(buffer, seq)[0] for name, seq in targets.items()}
+        completed = [n for n, s in target_states.items() if s == 'COMPLETED']
+        failed = [n for n, s in target_states.items() if s == 'FAILED']
+
+        # Если всё взломано — чистая победа
         if len(completed) == len(targets):
             print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets)
-            print(f"\n{C_RED}[ СЕТЬ ВЗЛОМАНА ] Все демоны успешно внедрены!{C_RESET}")
+            print(f"\n{C_GREEN}[ ПОЛНЫЙ ДОСТУП УСТАНОВЛЕН ] Все демоны успешно загружены в сеть.{C_RESET}")
             break
 
-        if len(buffer) >= BUFFER_SIZE:
+        # Если буфер забит или оставшиеся демоны физически мертвы — конец игры
+        if len(buffer) >= BUFFER_SIZE or (len(completed) + len(failed) == len(targets)):
             print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets)
             if completed:
-                print(f"\n{C_RED}[ ЧАСТИЧНЫЙ УСПЕХ ] Загружены: {', '.join(completed)}{C_RESET}")
+                print(f"\n{C_RED}[ ЧАСТИЧНЫЙ ВЗЛОМ ] Извлечены данные: {', '.join(completed)}{C_RESET}")
             else:
-                print(f"\n{C_RED}[ СИСТЕМА ЗАБЛОКИРОВАНА ] Превышен размер буфера.{C_RESET}")
+                print(f"\n{C_RED}[ АППАРАТНАЯ БЛОКИРОВКА ] Ни один демон не запущен. Сеть изолирована.{C_RESET}")
             break
 
         key = get_key()
 
-        if key in ('q', 'Q', '\x03'):  # Выход по Q или Ctrl+C
-            print("\nАварийное отключение...")
+        if key in ('q', 'Q', '\x03'):
+            print("\nСессия терминала завершена.")
             break
 
-        # Управление перемещением
         if mode == 'row':
-            # В режиме строки двигаемся горизонтально (влево/вправо)
-            if key in ('left', 'h'):
-                cursor_pos = (cursor_pos - 1) % GRID_SIZE
-            elif key in ('right', 'l'):
-                cursor_pos = (cursor_pos + 1) % GRID_SIZE
+            if key in ('left', 'h'): cursor_pos = (cursor_pos - 1) % GRID_SIZE
+            elif key in ('right', 'l'): cursor_pos = (cursor_pos + 1) % GRID_SIZE
         else:
-            # В режиме колонки двигаемся вертикально (вверх/вниз)
-            if key in ('up', 'k'):
-                cursor_pos = (cursor_pos - 1) % GRID_SIZE
-            elif key in ('down', 'j'):
-                cursor_pos = (cursor_pos + 1) % GRID_SIZE
+            if key in ('up', 'k'): cursor_pos = (cursor_pos - 1) % GRID_SIZE
+            elif key in ('down', 'j'): cursor_pos = (cursor_pos + 1) % GRID_SIZE
 
-        # Выбор ячейки
         if key in (' ', '\r', '\n', 'enter', 'space'):
             r = active_idx if mode == 'row' else cursor_pos
             c = cursor_pos if mode == 'row' else active_idx
 
             if (r, c) in used:
-                msg = "ОШИБКА: Точка матрицы уже использована!"
+                msg = "ВНИМАНИЕ: Нода уже выжжена! Выберите другую ячейку."
                 continue
 
-            # Фиксируем выбор
             buffer.append(matrix[r][c])
             used.add((r, c))
 
-            # Переключаем режим и прокидываем индекс новой оси
             if mode == 'row':
                 mode = 'col'
-                active_idx = c       # Теперь активна колонка с индексом выбранного столбца
-                cursor_pos = r       # Курсор встает на текущую строку
+                active_idx = c
+                cursor_pos = r
             else:
                 mode = 'row'
-                active_idx = r       # Теперь активна строка с индексом выбранной строки
-                cursor_pos = c       # Курсор встает на текущий столбец
+                active_idx = r
+                cursor_pos = c
 
 if __name__ == "__main__":
     main()
