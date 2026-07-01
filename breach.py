@@ -76,7 +76,6 @@ def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names
     while True:
         matrix = [[random.choice(HEX_CODES) for _ in range(grid_size)] for _ in range(grid_size)]
         
-        # Build solution path
         path = []
         c0 = random.randint(0, grid_size - 1)
         path.append((0, c0))
@@ -102,7 +101,6 @@ def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names
                 
         if not failed:
             sequence_pool = [matrix[r][c] for r, c in path]
-            
             targets = {}
             invalid_sequence = False
             
@@ -111,7 +109,6 @@ def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names
                 start_idx = random.randint(0, max_start)
                 seq = sequence_pool[start_idx : start_idx + length]
                 
-                # Rule: No repeating bytes inside a single daemon sequence
                 if len(set(seq)) != len(seq):
                     invalid_sequence = True
                     break
@@ -139,7 +136,7 @@ def get_target_status(buffer, seq, buffer_size):
         
     return 'IN_PROGRESS', overlap
 
-def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, message=""):
+def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left, message=""):
     clear_screen()
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
     print(f"{C_RED}║  CRITICAL SYSTEM FAULT: BREACH PROTOCOL ENGAGED        ║{C_RESET}")
@@ -179,7 +176,7 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
             buf_display.append(f"{C_WHITE}{buffer[i]}{C_RESET}")
         else:
             buf_display.append(f"{C_DARK_RED}[..]{C_RESET}")
-    print(f"{C_WHITE}BUFFER:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{buffer_size})\n")
+    print(f"{C_WHITE}BUFFER:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{buffer_size})  |  {C_RED}REBOOTS LEFT: {reboots_left}/3{C_RESET}\n")
 
     print(f"{C_WHITE}CODE MATRIX:{C_RESET}")
     for r in range(grid_size):
@@ -207,7 +204,7 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
         print(f"\n{C_RED}{message}{C_RESET}")
     else:
         print("\n")
-    print(f"{C_USED}[Arrows / HJKL] - Move | [Space / Enter] - Select Code | [Q] - Disconnect{C_RESET}")
+    print(f"{C_USED}[Arrows / HJKL] - Move | [Space / Enter] - Select | [R] - Reset | [Q] - Disconnect{C_RESET}")
 
 def main():
     if os.name == 'nt':
@@ -235,10 +232,11 @@ def main():
     mode = 'row'
     active_idx = 0
     cursor_pos = 0
+    reboots_left = 3
     msg = "LINK STABLE. Select initialization code in the top row."
 
     while True:
-        print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, msg)
+        print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left, msg)
         msg = ""
 
         target_states = {name: get_target_status(buffer, seq, buffer_size)[0] for name, seq in targets.items()}
@@ -246,23 +244,53 @@ def main():
         failed = [n for n, s in target_states.items() if s == 'FAILED']
 
         if len(completed) == len(targets):
-            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size)
+            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left)
             print(f"\n{C_GREEN}[ FULL ACCESS GRANTED ] All daemons successfully uploaded.{C_RESET}")
             break
 
+        # Проверка поражения
         if len(buffer) >= buffer_size or (len(completed) + len(failed) == len(targets)):
-            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size)
+            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left)
             if completed:
                 print(f"\n{C_RED}[ PARTIAL BREACH ] Extracted payloads: {', '.join(completed)}{C_RESET}")
             else:
                 print(f"\n{C_RED}[ HARDWARE LOCKOUT ] Network isolated. Intrusion failed.{C_RESET}")
-            break
+            
+            if reboots_left > 0:
+                print(f"{C_WHITE}Press [R] to Reboot Matrix ({reboots_left} left) or [Q] to Abort.{C_RESET}")
+                choice_made = False
+                while not choice_made:
+                    k = get_key()
+                    if k in ('r', 'R'):
+                        reboots_left -= 1
+                        buffer, used = [], set()
+                        mode, active_idx, cursor_pos = 'row', 0, 0
+                        msg = "SYSTEM REBOOTED. Matrix state restored."
+                        choice_made = True
+                    elif k in ('q', 'Q', '\x03'):
+                        sys.exit(0)
+                if msg:
+                    continue
+            else:
+                break
 
         key = get_key()
 
         if key in ('q', 'Q', '\x03'):
             print("\nTerminal session terminated.")
             break
+
+        # Горячий сброс по кнопке R во время игры
+        if key in ('r', 'R'):
+            if reboots_left > 0:
+                reboots_left -= 1
+                buffer, used = [], set()
+                mode, active_idx, cursor_pos = 'row', 0, 0
+                msg = f"SYSTEM REBOOTED. Options left: {reboots_left}"
+                continue
+            else:
+                msg = "WARNING: No reboots left! Hardware lockout imminent."
+                continue
 
         if mode == 'row':
             if key in ('left', 'h'): cursor_pos = (cursor_pos - 1) % grid_size
