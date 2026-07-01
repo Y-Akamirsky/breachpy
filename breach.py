@@ -2,7 +2,7 @@ import random
 import os
 import sys
 
-# Поддержка raw-ввода для Linux
+# Cross-platform raw input handling (Linux/macOS vs Windows)
 try:
     import tty
     import termios
@@ -33,52 +33,51 @@ except ImportError:
             if ch2 == b'P': return 'down'
             if ch2 == b'M': return 'right'
             if ch2 == b'K': return 'left'
-        ch = ch.decode('utf-8', errors='ignore')
-        if ch in ('\r', '\n'): return 'enter'
-        return ch
+        try:
+            ch_str = ch.decode('utf-8')
+        except:
+            ch_str = ''
+        if ch_str in ('\r', '\n'): return 'enter'
+        if ch_str == ' ': return 'space'
+        return ch_str.lower()
 
 HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF']
 GRID_SIZE = 5
 BUFFER_SIZE = 6
 
-# Палитра Arasaka NetSec (Красная тревога + Зеленый успех)
+# Arasaka NetSec Palette (Aggressive Red & Clean UI)
 C_RESET = '\033[0m'
-C_RED = '\033[91m'       # Активные элементы / опасный интерфейс
-C_DARK_RED = '\033[31m'  # Матрица по умолчанию
-C_GREEN = '\033[92m'     # Успешно загруженные демоны
-C_WHITE = '\033[97m'     # Накопленный прогресс / совпадения
-C_USED = '\033[90m'      # Мертвые/использованные ноды
-C_CURSOR = '\033[41m\033[97m\033[1m' # Курсор
+C_RED = '\033[91m'       # Active systems / alert
+C_DARK_RED = '\033[31m'  # Standard matrix elements
+C_GREEN = '\033[92m'     # Uploaded daemons
+C_WHITE = '\033[97m'     # Synchronized sequence steps
+C_USED = '\033[90m'      # Burned/inactive nodes
+C_CURSOR = '\033[41m\033[97m\033[1m' # High-contrast inverse cursor
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
 
 def generate_targets():
     return {
-        "ДАТАМАЙН V1": [random.choice(HEX_CODES) for _ in range(2)],
-        "ДАТАМАЙН V2": [random.choice(HEX_CODES) for _ in range(3)],
-        "БЕКДОР СЕТИ": [random.choice(HEX_CODES) for _ in range(4)]
+        "DATAMINE V1": [random.choice(HEX_CODES) for _ in range(2)],
+        "DATAMINE V2": [random.choice(HEX_CODES) for _ in range(3)],
+        "ICEPICK DAEMON": [random.choice(HEX_CODES) for _ in range(4)]
     }
 
 def get_target_status(buffer, seq):
-    """Вычисляет состояние демона на основе текущего буфера"""
     buf_str = " ".join(buffer)
     seq_str = " ".join(seq)
     
-    # Полное совпадение
     if seq_str in buf_str:
         return 'COMPLETED', len(seq)
         
-    # Ищем максимальное частичное совпадение (конец буфера совпадает с началом демона)
     overlap = 0
     for k in range(len(seq), 0, -1):
         if len(buffer) >= k and buffer[-k:] == seq[:k]:
             overlap = k
             break
             
-    # Проверяем, реально ли еще успеть дописать демона в буфер
     remaining_space = BUFFER_SIZE - len(buffer)
-    # Не хватает места продолжить текущий трек И не хватает места начать его с нуля
     if (len(seq) - overlap > remaining_space) and (len(seq) > remaining_space):
         return 'FAILED', 0
         
@@ -87,14 +86,13 @@ def get_target_status(buffer, seq):
 def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, message=""):
     clear_screen()
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
-    print(f"{C_RED}║  КРИТИЧЕСКИЙ СБОЙ СИСТЕМЫ: ОБНАРУЖЕН ПРОТОКОЛ ВЗЛОМА   ║{C_RESET}")
+    print(f"{C_RED}║  CRITICAL SYSTEM FAULT: BREACH PROTOCOL ENGAGED        ║{C_RESET}")
     print(f"{C_RED}╚════════════════════════════════════════════════════════╝{C_RESET}\n")
 
-    print(f"{C_WHITE}ДЕМОНЫ В СЕТИ:{C_RESET}")
+    print(f"{C_WHITE}BREACH TARGETS:{C_RESET}")
     for name, seq in targets.items():
         status, overlap = get_target_status(buffer, seq)
         
-        # Рендеринг цепочки кодов демона с учетом прогресса
         rendered_seq = []
         for i, code in enumerate(seq):
             if status == 'COMPLETED':
@@ -103,33 +101,32 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
                 rendered_seq.append(f"{C_USED}{code}{C_RESET}")
             else:
                 if i < overlap:
-                    rendered_seq.append(f"{C_WHITE}{code}{C_RESET}")  # Текущая цепочка совпадения
+                    rendered_seq.append(f"{C_WHITE}{code}{C_RESET}")
                 else:
                     rendered_seq.append(f"{C_RED}{code}{C_RESET}")
                     
-        # Статусный тег справа
         if status == 'COMPLETED':
-            status_tag = f" {C_GREEN}[ ЗАГРУЖЕН ]{C_RESET}"
+            status_tag = f" {C_GREEN}[ UPLOADED ]{C_RESET}"
         elif status == 'FAILED':
-            status_tag = f" {C_USED}[ СБОЙ СВЯЗИ ]{C_RESET}"
+            status_tag = f" {C_USED}[ LINK FAULT ]{C_RESET}"
         elif overlap > 0:
-            status_tag = f" {C_WHITE}[ СИНХР. {overlap}/{len(seq)} ]{C_RESET}"
+            status_tag = f" {C_WHITE}[ SYNC {overlap}/{len(seq)} ]{C_RESET}"
         else:
             status_tag = ""
 
         print(f"  {name:<15} ->  {' '.join(rendered_seq)}{status_tag}")
     print()
 
-    # Рендеринг буфера
+    # Buffer render
     buf_display = []
     for i in range(BUFFER_SIZE):
         if i < len(buffer):
             buf_display.append(f"{C_WHITE}{buffer[i]}{C_RESET}")
         else:
             buf_display.append(f"{C_DARK_RED}[..]{C_RESET}")
-    print(f"{C_WHITE}БУФЕР РЕГИСТРОВ:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{BUFFER_SIZE})\n")
+    print(f"{C_WHITE}BUFFER:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{BUFFER_SIZE})\n")
 
-    print(f"{C_WHITE}МАТРИЦА ДАННЫХ:{C_RESET}")
+    print(f"{C_WHITE}CODE MATRIX:{C_RESET}")
     for r in range(GRID_SIZE):
         row_str = []
         for c in range(GRID_SIZE):
@@ -155,9 +152,13 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
         print(f"\n{C_RED}{message}{C_RESET}")
     else:
         print("\n")
-    print(f"{C_USED}[Стрелочки / HJKL] - Навигация | [Space / Enter] - Выбрать код | [Q] - Выход{C_RESET}")
+    print(f"{C_USED}[Arrows / HJKL] - Move | [Space / Enter] - Select Code | [Q] - Disconnect{C_RESET}")
 
 def main():
+    # Force ANSI escape codes support on Windows 10/11 native console
+    if os.name == 'nt':
+        os.system('')
+
     matrix = [[random.choice(HEX_CODES) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     targets = generate_targets()
     used = set()
@@ -166,36 +167,33 @@ def main():
     mode = 'row'
     active_idx = 0
     cursor_pos = 0
-    msg = "СЕТЬ СТАБИЛЬНА. Выберите стартовый код в верхней строке."
+    msg = "LINK STABLE. Select initialization code in the top row."
 
     while True:
         print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, msg)
         msg = ""
 
-        # Считаем статусы на текущий шаг
         target_states = {name: get_target_status(buffer, seq)[0] for name, seq in targets.items()}
         completed = [n for n, s in target_states.items() if s == 'COMPLETED']
         failed = [n for n, s in target_states.items() if s == 'FAILED']
 
-        # Если всё взломано — чистая победа
         if len(completed) == len(targets):
             print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets)
-            print(f"\n{C_GREEN}[ ПОЛНЫЙ ДОСТУП УСТАНОВЛЕН ] Все демоны успешно загружены в сеть.{C_RESET}")
+            print(f"\n{C_GREEN}[ FULL ACCESS GRANTED ] All daemons successfully uploaded.{C_RESET}")
             break
 
-        # Если буфер забит или оставшиеся демоны физически мертвы — конец игры
         if len(buffer) >= BUFFER_SIZE or (len(completed) + len(failed) == len(targets)):
             print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets)
             if completed:
-                print(f"\n{C_RED}[ ЧАСТИЧНЫЙ ВЗЛОМ ] Извлечены данные: {', '.join(completed)}{C_RESET}")
+                print(f"\n{C_RED}[ PARTIAL BREACH ] Extracted payloads: {', '.join(completed)}{C_RESET}")
             else:
-                print(f"\n{C_RED}[ АППАРАТНАЯ БЛОКИРОВКА ] Ни один демон не запущен. Сеть изолирована.{C_RESET}")
+                print(f"\n{C_RED}[ HARDWARE LOCKOUT ] Network isolated. Intrusion failed.{C_RESET}")
             break
 
         key = get_key()
 
         if key in ('q', 'Q', '\x03'):
-            print("\nСессия терминала завершена.")
+            print("\nTerminal session terminated.")
             break
 
         if mode == 'row':
@@ -210,7 +208,7 @@ def main():
             c = cursor_pos if mode == 'row' else active_idx
 
             if (r, c) in used:
-                msg = "ВНИМАНИЕ: Нода уже выжжена! Выберите другую ячейку."
+                msg = "WARNING: Node already burned! Select another coordinate."
                 continue
 
             buffer.append(matrix[r][c])
