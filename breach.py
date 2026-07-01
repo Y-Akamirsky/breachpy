@@ -42,29 +42,85 @@ except ImportError:
         return ch_str.lower()
 
 HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF']
-GRID_SIZE = 5
-BUFFER_SIZE = 6
 
-# Arasaka NetSec Palette (Aggressive Red & Clean UI)
+# Arasaka NetSec Palette
 C_RESET = '\033[0m'
-C_RED = '\033[91m'       # Active systems / alert
-C_DARK_RED = '\033[31m'  # Standard matrix elements
-C_GREEN = '\033[92m'     # Uploaded daemons
-C_WHITE = '\033[97m'     # Synchronized sequence steps
-C_USED = '\033[90m'      # Burned/inactive nodes
-C_CURSOR = '\033[41m\033[97m\033[1m' # High-contrast inverse cursor
+C_RED = '\033[91m'       
+C_DARK_RED = '\033[31m'  
+C_GREEN = '\033[92m'     
+C_WHITE = '\033[97m'     
+C_USED = '\033[90m'      
+C_CURSOR = '\033[41m\033[97m\033[1m'
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
 
-def generate_targets():
-    return {
-        "DATAMINE V1": [random.choice(HEX_CODES) for _ in range(2)],
-        "DATAMINE V2": [random.choice(HEX_CODES) for _ in range(3)],
-        "ICEPICK DAEMON": [random.choice(HEX_CODES) for _ in range(4)]
-    }
+def select_difficulty():
+    clear_screen()
+    print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
+    print(f"{C_RED}║               SELECT INTRUSION LEVEL                   ║{C_RESET}")
+    print(f"{C_RED}╚════════════════════════════════════════════════════════╝{C_RESET}\n")
+    print("  1. LAMER      (Easy)   [Matrix: 4x4, Buffer: 6,  Daemons: 2]")
+    print("  2. IRC MEMBER (Medium) [Matrix: 6x6, Buffer: 10, Daemons: 3]")
+    print("  3. HACKER     (Hard)   [Matrix: 8x8, Buffer: 14, Daemons: 4]\n")
+    
+    while True:
+        choice = input(f"{C_WHITE}Choose level (1-3) or Q to quit: {C_RESET}").strip().lower()
+        if choice in ('1', '2', '3'):
+            return int(choice)
+        if choice == 'q':
+            sys.exit(0)
 
-def get_target_status(buffer, seq):
+def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names):
+    """Guarantees 100% solvability with STRICT UNIQUE bytes within each daemon sequence"""
+    while True:
+        matrix = [[random.choice(HEX_CODES) for _ in range(grid_size)] for _ in range(grid_size)]
+        
+        # Build solution path
+        path = []
+        c0 = random.randint(0, grid_size - 1)
+        path.append((0, c0))
+        current_search = 'row_for_col'
+        failed = False
+        
+        for _ in range(buffer_size - 1):
+            r_curr, c_curr = path[-1]
+            if current_search == 'row_for_col':
+                options = [r for r in range(grid_size) if (r, c_curr) not in path]
+                if not options:
+                    failed = True; break
+                r_next = random.choice(options)
+                path.append((r_next, c_curr))
+                current_search = 'col_for_row'
+            else:
+                options = [c for c in range(grid_size) if (r_curr, c) not in path]
+                if not options:
+                    failed = True; break
+                c_next = random.choice(options)
+                path.append((r_curr, c_next))
+                current_search = 'row_for_col'
+                
+        if not failed:
+            sequence_pool = [matrix[r][c] for r, c in path]
+            
+            targets = {}
+            invalid_sequence = False
+            
+            for name, length in zip(daemon_names, daemon_lengths):
+                max_start = len(sequence_pool) - length
+                start_idx = random.randint(0, max_start)
+                seq = sequence_pool[start_idx : start_idx + length]
+                
+                # Rule: No repeating bytes inside a single daemon sequence
+                if len(set(seq)) != len(seq):
+                    invalid_sequence = True
+                    break
+                targets[name] = seq
+                
+            if not invalid_sequence:
+                return matrix, targets
+
+def get_target_status(buffer, seq, buffer_size):
     buf_str = " ".join(buffer)
     seq_str = " ".join(seq)
     
@@ -77,13 +133,13 @@ def get_target_status(buffer, seq):
             overlap = k
             break
             
-    remaining_space = BUFFER_SIZE - len(buffer)
+    remaining_space = buffer_size - len(buffer)
     if (len(seq) - overlap > remaining_space) and (len(seq) > remaining_space):
         return 'FAILED', 0
         
     return 'IN_PROGRESS', overlap
 
-def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, message=""):
+def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, message=""):
     clear_screen()
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
     print(f"{C_RED}║  CRITICAL SYSTEM FAULT: BREACH PROTOCOL ENGAGED        ║{C_RESET}")
@@ -91,7 +147,7 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
 
     print(f"{C_WHITE}BREACH TARGETS:{C_RESET}")
     for name, seq in targets.items():
-        status, overlap = get_target_status(buffer, seq)
+        status, overlap = get_target_status(buffer, seq, buffer_size)
         
         rendered_seq = []
         for i, code in enumerate(seq):
@@ -114,22 +170,21 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
         else:
             status_tag = ""
 
-        print(f"  {name:<15} ->  {' '.join(rendered_seq)}{status_tag}")
+        print(f"  {name:<18} ->  {' '.join(rendered_seq)}{status_tag}")
     print()
 
-    # Buffer render
     buf_display = []
-    for i in range(BUFFER_SIZE):
+    for i in range(buffer_size):
         if i < len(buffer):
             buf_display.append(f"{C_WHITE}{buffer[i]}{C_RESET}")
         else:
             buf_display.append(f"{C_DARK_RED}[..]{C_RESET}")
-    print(f"{C_WHITE}BUFFER:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{BUFFER_SIZE})\n")
+    print(f"{C_WHITE}BUFFER:{C_RESET} " + " ".join(buf_display) + f" ({len(buffer)}/{buffer_size})\n")
 
     print(f"{C_WHITE}CODE MATRIX:{C_RESET}")
-    for r in range(GRID_SIZE):
+    for r in range(grid_size):
         row_str = []
-        for c in range(GRID_SIZE):
+        for c in range(grid_size):
             cell = matrix[r][c]
             is_used = (r, c) in used
             is_cursor = (mode == 'row' and r == active_idx and c == cursor_pos) or \
@@ -155,12 +210,25 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, mes
     print(f"{C_USED}[Arrows / HJKL] - Move | [Space / Enter] - Select Code | [Q] - Disconnect{C_RESET}")
 
 def main():
-    # Force ANSI escape codes support on Windows 10/11 native console
     if os.name == 'nt':
         os.system('')
 
-    matrix = [[random.choice(HEX_CODES) for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
-    targets = generate_targets()
+    level = select_difficulty()
+    
+    if level == 1:
+        grid_size, buffer_size = 4, 6
+        daemon_lengths = [2, 3]
+        daemon_names = ["DATAMINE V1", "DATAMINE V2"]
+    elif level == 2:
+        grid_size, buffer_size = 6, 10
+        daemon_lengths = [2, 3, 4]
+        daemon_names = ["DATAMINE V1", "DATAMINE V2", "ICEPICK DAEMON"]
+    else:
+        grid_size, buffer_size = 8, 14
+        daemon_lengths = [2, 3, 4, 5]
+        daemon_names = ["DATAMINE V1", "DATAMINE V2", "ICEPICK DAEMON", "BLACKWALL OVERRIDE"]
+
+    matrix, targets = generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names)
     used = set()
     buffer = []
 
@@ -170,20 +238,20 @@ def main():
     msg = "LINK STABLE. Select initialization code in the top row."
 
     while True:
-        print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, msg)
+        print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, msg)
         msg = ""
 
-        target_states = {name: get_target_status(buffer, seq)[0] for name, seq in targets.items()}
+        target_states = {name: get_target_status(buffer, seq, buffer_size)[0] for name, seq in targets.items()}
         completed = [n for n, s in target_states.items() if s == 'COMPLETED']
         failed = [n for n, s in target_states.items() if s == 'FAILED']
 
         if len(completed) == len(targets):
-            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets)
+            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size)
             print(f"\n{C_GREEN}[ FULL ACCESS GRANTED ] All daemons successfully uploaded.{C_RESET}")
             break
 
-        if len(buffer) >= BUFFER_SIZE or (len(completed) + len(failed) == len(targets)):
-            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets)
+        if len(buffer) >= buffer_size or (len(completed) + len(failed) == len(targets)):
+            print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size)
             if completed:
                 print(f"\n{C_RED}[ PARTIAL BREACH ] Extracted payloads: {', '.join(completed)}{C_RESET}")
             else:
@@ -197,11 +265,11 @@ def main():
             break
 
         if mode == 'row':
-            if key in ('left', 'h'): cursor_pos = (cursor_pos - 1) % GRID_SIZE
-            elif key in ('right', 'l'): cursor_pos = (cursor_pos + 1) % GRID_SIZE
+            if key in ('left', 'h'): cursor_pos = (cursor_pos - 1) % grid_size
+            elif key in ('right', 'l'): cursor_pos = (cursor_pos + 1) % grid_size
         else:
-            if key in ('up', 'k'): cursor_pos = (cursor_pos - 1) % GRID_SIZE
-            elif key in ('down', 'j'): cursor_pos = (cursor_pos + 1) % GRID_SIZE
+            if key in ('up', 'k'): cursor_pos = (cursor_pos - 1) % grid_size
+            elif key in ('down', 'j'): cursor_pos = (cursor_pos + 1) % grid_size
 
         if key in (' ', '\r', '\n', 'enter', 'space'):
             r = active_idx if mode == 'row' else cursor_pos
