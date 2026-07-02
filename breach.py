@@ -72,7 +72,8 @@ def select_difficulty():
             sys.exit(0)
 
 def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names):
-    """Guarantees 100% solvability with STRICT UNIQUE bytes within each daemon sequence"""
+    """Guarantees 100% solvability with STRICT UNIQUE bytes within each daemon sequence,
+       and guarantees that at least one daemon starts in the first row."""
     while True:
         matrix = [[random.choice(HEX_CODES) for _ in range(grid_size)] for _ in range(grid_size)]
         
@@ -104,9 +105,17 @@ def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names
             targets = {}
             invalid_sequence = False
             
-            for name, length in zip(daemon_names, daemon_lengths):
+            # Выбираем случайного деймона, который гарантированно начнется с первого шага (из нулевой строки)
+            anchor_daemon_idx = random.randint(0, len(daemon_names) - 1)
+            
+            for i, (name, length) in enumerate(zip(daemon_names, daemon_lengths)):
                 max_start = len(sequence_pool) - length
-                start_idx = random.randint(0, max_start)
+                
+                if i == anchor_daemon_idx:
+                    start_idx = 0  # Жестко привязываем к самому первому байту (0-я строка)
+                else:
+                    start_idx = random.randint(0, max_start)
+                    
                 seq = sequence_pool[start_idx : start_idx + length]
                 
                 if len(set(seq)) != len(seq):
@@ -334,7 +343,7 @@ def main():
                 print("Terminal disconnected successfully. Goodbye, netrunner.")
                 sys.exit(0)
             if k in (' ', '\r', '\n', 'enter', 'space'):
-                menu_choice = True  # Breaks local loop, outer loop triggers level select again
+                menu_choice = True
 
 if __name__ == "__main__":
     main()
