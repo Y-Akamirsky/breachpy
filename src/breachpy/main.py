@@ -231,6 +231,15 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
 
 
 def main():
+    # Handle version flags before initializing anything heavy
+    if len(sys.argv) > 1 and sys.argv[1] in ('-v', '--version'):
+        print("breachpy version 1.0.0")
+        print("Copyright (C) 2026 Yaroslav Akamirsky <akamirsky.yaros@gmail.com>")
+        print("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.")
+        print("This is free software: you are free to change and redistribute it.")
+        print("There is NO WARRANTY, to the extent permitted by law.")
+        sys.exit(0)
+
     if os.name == 'nt':
         os.system('')
 
