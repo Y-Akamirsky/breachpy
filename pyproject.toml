@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "breachpy"
+version = "1.0.0"
+authors = [
+    { name="Yaroslav Akamirsky", email="akamirsky.yaros@gmail.com" }
+]
+description = "Cyberpunk 2077 Breach Protocol minigame in your terminal"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Games/Entertainment :: Puzzle Games"
+]
+dependencies = []
+
+[project.scripts]
+breachpy = "breachpy.main:main"

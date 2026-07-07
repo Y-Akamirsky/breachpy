@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="512"
+   height="512"
+   viewBox="0 0 512 512"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   sodipodi:docname="breachpy.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="0.84765627"
+     inkscape:cx="221.78801"
+     inkscape:cy="218.24884"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient4"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#959595;stop-opacity:1;"
+         offset="0"
+         id="stop5" />
+      <stop
+         style="stop-color:#3a3a3a;stop-opacity:1;"
+         offset="1"
+         id="stop4" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient2"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#181818;stop-opacity:1;"
+         offset="0"
+         id="stop2" />
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="1"
+         id="stop3" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2"
+       id="linearGradient3"
+       x1="52.493752"
+       y1="173.77808"
+       x2="459.50623"
+       y2="338.2218"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4"
+       id="linearGradient5"
+       x1="78.915627"
+       y1="107.40855"
+       x2="433.08447"
+       y2="404.59149"
+       gradientUnits="userSpaceOnUse" />
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter5"
+       x="-0.03940363"
+       y="-0.03940363"
+       width="1.0788073"
+       height="1.0788073">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="7.5906903"
+         id="feGaussianBlur5" />
+    </filter>
+  </defs>
+  <g
+     inkscape:label="Слой 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="opacity:0.40604;mix-blend-mode:normal;fill:#000000;fill-opacity:1;stroke-width:2.35727;stroke-linecap:square;stroke-linejoin:round;filter:url(#filter5)"
+       id="rect5"
+       width="462.33447"
+       height="462.33447"
+       x="24.832754"
+       y="24.832754"
+       rx="67"
+       transform="matrix(1,0,0,0.99832751,0,9.1871591)" />
+    <rect
+       style="opacity:1;fill:url(#linearGradient5);fill-opacity:0.498728;stroke-width:2.35727;stroke-linecap:square;stroke-linejoin:round"
+       id="rect1"
+       width="462.33447"
+       height="462.33447"
+       x="24.832754"
+       y="24.832754"
+       rx="75" />
+    <rect
+       style="opacity:1;fill:url(#linearGradient3);fill-opacity:1;stroke-width:2.23818;stroke-linecap:square;stroke-linejoin:round"
+       id="rect2"
+       width="438.97714"
+       height="438.97714"
+       x="36.511421"
+       y="36.511421"
+       rx="67" />
+    <g
+       id="g7"
+       transform="translate(-9.1760951,-7.5077142)">
+      <ellipse
+         style="opacity:1;fill:#ff6a13;fill-opacity:1;stroke-width:0.248737;stroke-linecap:square;stroke-linejoin:round"
+         id="path1"
+         cx="99.674683"
+         cy="97.624832"
+         rx="16.910738"
+         ry="16.910744" />
+      <ellipse
+         style="opacity:1;fill:#ffd902;fill-opacity:1;stroke-width:0.248737;stroke-linecap:square;stroke-linejoin:round"
+         id="ellipse6"
+         cx="153.99409"
+         cy="97.624832"
+         rx="16.910738"
+         ry="16.910744" />
+      <ellipse
+         style="opacity:1;fill:#24d499;fill-opacity:1;stroke-width:0.248737;stroke-linecap:square;stroke-linejoin:round"
+         id="ellipse7"
+         cx="208.31352"
+         cy="97.624832"
+         rx="16.910738"
+         ry="16.910744" />
+    </g>
+    <g
+       id="g10"
+       transform="matrix(1.0388286,0,0,1.3348301,-4.3204487,-120.22843)"
+       style="fill:#ff6a13;fill-opacity:1">
+      <path
+         id="rect7"
+         style="opacity:1;fill:#ff6a13;fill-opacity:1;stroke-width:1.4575;stroke-linecap:square;stroke-linejoin:round"
+         d="m 172.34629,213.38393 v 190.53386 h 79.61808 l -0.70271,-17.79123 H 189.2178 V 231.17372 h 62.04386 l 0.70271,-17.78979 z m 181.56372,0 0.70272,17.78979 h 62.04383 v 154.95284 h -62.04383 l -0.70272,17.79123 h 79.61807 V 213.38393 Z"
+         sodipodi:nodetypes="cccccccccccccccccc" />
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:158.693px;font-family:'DepartureMono Nerd Font Mono';-inkscape-font-specification:'DepartureMono Nerd Font Mono';writing-mode:lr-tb;direction:ltr;opacity:1;fill:#24d499;fill-opacity:1;stroke-width:8.50139;stroke-linecap:square;stroke-linejoin:round"
+         x="202.36414"
+         y="368.83154"
+         id="text9"><tspan
+           sodipodi:role="line"
+           id="tspan9"
+           x="202.36414"
+           y="368.83154"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'DepartureMono Nerd Font Mono';-inkscape-font-specification:'DepartureMono Nerd Font Mono';fill:#24d499;fill-opacity:1;stroke-width:8.50139">BP</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:211.596px;font-family:'DepartureMono Nerd Font Mono';-inkscape-font-specification:'DepartureMono Nerd Font Mono';writing-mode:lr-tb;direction:ltr;opacity:1;fill:#ffffff;fill-opacity:1;stroke-width:11.3355;stroke-linecap:square;stroke-linejoin:round"
+         x="29.829885"
+         y="375.15204"
+         id="text10"><tspan
+           sodipodi:role="line"
+           id="tspan10"
+           x="29.829885"
+           y="375.15204"
+           style="fill:#ffffff;fill-opacity:1;stroke-width:11.3355">&gt;</tspan></text>
+    </g>
+  </g>
+</svg>
