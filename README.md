@@ -1,7 +1,7 @@
 # breachpy
 ### Famous "Breach protocol" puzzle game from "Cyberpunk 2077" in your terminal
 
-![Version](https://img.shields.io/badge/version-1.0.0-red) ![License](https://img.shields.io/badge/license-GPL3-cyan)
+![Version](https://img.shields.io/badge/version-1.0.2-red) ![License](https://img.shields.io/badge/license-GPL3-cyan)
 
 ![Logo](img/logo.svg)
 

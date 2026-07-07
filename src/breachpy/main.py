@@ -50,7 +50,7 @@ except ImportError:
         if ch_str == ' ': return 'space'
         return ch_str.lower()
 
-HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF']
+HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF', 'D3', '4E', 'A1', '2B']
 
 # -------------------------------------------------------------
 # CUSTOM TRUECOLOR PALETTE
@@ -73,9 +73,9 @@ def select_difficulty():
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
     print(f"{C_RED}║               SELECT INTRUSION LEVEL                   ║{C_RESET}")
     print(f"{C_RED}╚════════════════════════════════════════════════════════╝{C_RESET}\n")
-    print(f"  {C_WHITE}1. LAMER{C_RESET}      (Easy)   [Matrix: 4x4, Buffer: 6,  Daemons: 2]")
-    print(f"  {C_WHITE}2. IRC MEMBER{C_RESET} (Medium) [Matrix: 6x6, Buffer: 10, Daemons: 3]")
-    print(f"  {C_WHITE}3. HACKER{C_RESET}     (Hard)   [Matrix: 8x8, Buffer: 14, Daemons: 4]\n")
+    print(f"  {C_WHITE}1. LAMER{C_RESET}      (Easy)   [Matrix: 4x4, Buffer: 4,  Daemons: 2]")
+    print(f"  {C_WHITE}2. IRC MEMBER{C_RESET} (Medium) [Matrix: 6x6, Buffer: 6,  Daemons: 3]")
+    print(f"  {C_WHITE}3. HACKER{C_RESET}     (Hard)   [Matrix: 8x8, Buffer: 10, Daemons: 4]\n")
     print(f"{C_WHITE}Press (1-3) to choose level or [Q] to quit...{C_RESET}")
     
     while True:
@@ -87,7 +87,7 @@ def select_difficulty():
 
 def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names):
     """Guarantees 100% solvability with STRICT UNIQUE bytes within each daemon sequence,
-       and guarantees that at least one daemon starts in the first row."""
+       guarantees one daemon starts in the first row, and prevents subset nesting."""
     while True:
         matrix = [[random.choice(HEX_CODES) for _ in range(grid_size)] for _ in range(grid_size)]
         
@@ -116,28 +116,45 @@ def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names
                 
         if not failed:
             sequence_pool = [matrix[r][c] for r, c in path]
-            targets = {}
-            invalid_sequence = False
             
-            anchor_daemon_idx = random.randint(0, len(daemon_names) - 1)
-            
-            for i, (name, length) in enumerate(zip(daemon_names, daemon_lengths)):
-                max_start = len(sequence_pool) - length
+            # Пробуем нарезать деймоны из сгенерированного пути несколько раз,
+            # так как жесткие правила могут забраковать случайный срез
+            for _ in range(100):
+                targets = {}
+                invalid_sequence = False
                 
-                if i == anchor_daemon_idx:
-                    start_idx = 0 
-                else:
-                    start_idx = random.randint(0, max_start)
+                anchor_daemon_idx = random.randint(0, len(daemon_names) - 1)
+                
+                for i, (name, length) in enumerate(zip(daemon_names, daemon_lengths)):
+                    max_start = len(sequence_pool) - length
                     
-                seq = sequence_pool[start_idx : start_idx + length]
-                
-                if len(set(seq)) != len(seq):
-                    invalid_sequence = True
-                    break
-                targets[name] = seq
-                
-            if not invalid_sequence:
-                return matrix, targets
+                    if i == anchor_daemon_idx:
+                        start_idx = 0 
+                    else:
+                        start_idx = random.randint(0, max_start)
+                        
+                    seq = sequence_pool[start_idx : start_idx + length]
+                    
+                    # 1. Защита от дублей внутри одного деймона
+                    if len(set(seq)) != len(seq):
+                        invalid_sequence = True
+                        break
+                        
+                    # 2. АНТИ-МАТРЕШКА: Запрет на полное поглощение строк друг другом
+                    seq_str = " ".join(seq)
+                    for existing_name, existing_seq in targets.items():
+                        ex_str = " ".join(existing_seq)
+                        if seq_str in ex_str or ex_str in seq_str:
+                            invalid_sequence = True
+                            break
+                            
+                    if invalid_sequence:
+                        break
+                        
+                    targets[name] = seq
+                    
+                if not invalid_sequence:
+                    return matrix, targets
 
 def get_target_status(buffer, seq, buffer_size):
     buf_str = " ".join(buffer)
@@ -231,9 +248,8 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
 
 
 def main():
-    # Handle version flags before initializing anything heavy
     if len(sys.argv) > 1 and sys.argv[1] in ('-v', '--version'):
-        print("breachpy version 1.0.0")
+        print("breachpy version 1.0.2")
         print("Copyright (C) 2026 Yaroslav Akamirsky <akamirsky.yaros@gmail.com>")
         print("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.")
         print("This is free software: you are free to change and redistribute it.")
@@ -247,15 +263,15 @@ def main():
         level = select_difficulty()
         
         if level == 1:
-            grid_size, buffer_size = 4, 6
+            grid_size, buffer_size = 4, 4
             daemon_lengths = [2, 3]
             daemon_names = ["DATAMINE V1", "DATAMINE V2"]
         elif level == 2:
-            grid_size, buffer_size = 6, 10
+            grid_size, buffer_size = 6, 6
             daemon_lengths = [2, 3, 4]
             daemon_names = ["DATAMINE V1", "DATAMINE V2", "ICEPICK DAEMON"]
         else:
-            grid_size, buffer_size = 8, 14
+            grid_size, buffer_size = 8, 10
             daemon_lengths = [2, 3, 4, 5]
             daemon_names = ["DATAMINE V1", "DATAMINE V2", "ICEPICK DAEMON", "BLACKWALL OVERRIDE"]
 
