@@ -1,3 +1,18 @@
+Metadata-Version: 2.4
+Name: breachpy
+Version: 1.0.0
+Summary: Cyberpunk 2077 Breach Protocol minigame in your terminal
+Author-email: Yaroslav Akamirsky <akamirsky.yaros@gmail.com>
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Classifier: Operating System :: OS Independent
+Classifier: Environment :: Console
+Classifier: Topic :: Games/Entertainment :: Puzzle Games
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Dynamic: license-file
+
 # breachpy
 ### Famous "Breach protocol" puzzle game from "Cyberpunk 2077" in your terminal
 
@@ -21,7 +36,7 @@
 
 ## Installation
 
-### Via pip/pipx
+### Via pip/pipx [Soon]
 
 1. Make sure you have [python](https://www.python.org/downloads/) installed in your system
 

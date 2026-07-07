@@ -1,0 +1,10 @@
+LICENSE
+README.md
+pyproject.toml
+src/breachpy/__init__.py
+src/breachpy/main.py
+src/breachpy.egg-info/PKG-INFO
+src/breachpy.egg-info/SOURCES.txt
+src/breachpy.egg-info/dependency_links.txt
+src/breachpy.egg-info/entry_points.txt
+src/breachpy.egg-info/top_level.txt
