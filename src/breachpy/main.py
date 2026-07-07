@@ -1,8 +1,17 @@
+#!/usr/bin/env python3
+
+# breachpy - Cyberpunk 2077 Breach Protocol minigame in your terminal.
+# Copyright (C) 2026  Yaroslav Akamirsky <akamirsky.yaros@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
 import random
 import os
 import sys
 
-# Cross-platform raw input handling (Linux/macOS vs Windows)
 try:
     import tty
     import termios
@@ -44,7 +53,7 @@ except ImportError:
 HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF']
 
 # -------------------------------------------------------------
-# CUSTOM TRUECOLOR PALETTE (Kitty Theme Based)
+# CUSTOM TRUECOLOR PALETTE
 # -------------------------------------------------------------
 C_RESET       = '\033[0m'
 C_RED         = '\033[38;2;255;106;19m'   # color9  #ff6a13 (Main UI / Active Line)
@@ -54,7 +63,6 @@ C_WHITE       = '\033[38;2;234;234;234m'  # color15 #eaeaea (Bright Text / Buffe
 C_USED        = '\033[38;2;136;136;136m'  # color8  #888888 (Failed / Dimmed text)
 C_PROG_USED   = '\033[38;2;255;217;2m'    # color11 #ffd902 (Yellow - clicked byte trace)
 C_WIN_USED    = '\033[38;2;36;212;153m'   # color14 #24c9d4 (Cyan - clicked byte on win)
-# Cursor: Background color9 (#ff6a13), Foreground color15 (#eaeaea), Bold
 C_CURSOR      = '\033[48;2;255;106;19m\033[38;2;234;234;234m\033[1m'
 
 def clear_screen():
@@ -205,7 +213,6 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
             if is_cursor:
                 row_str.append(f"{C_CURSOR}{cell}{C_RESET}")
             elif is_used:
-                # В зависимости от победы/подбора красим сохраненный байт
                 trace_color = C_WIN_USED if is_won else C_PROG_USED
                 row_str.append(f"{trace_color}{cell}{C_RESET}")
             elif is_active_line:
@@ -262,14 +269,14 @@ def main():
             completed = [n for n, s in target_states.items() if s == 'COMPLETED']
             failed = [n for n, s in target_states.items() if s == 'FAILED']
 
-            # Победа
+            # Victory
             if len(completed) == len(targets):
                 print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left, is_won=True)
                 print(f"\n{C_GREEN}[ FULL ACCESS GRANTED ] All daemons successfully uploaded.{C_RESET}")
                 session_active = False
                 continue
 
-            # Поражение / Конец буфера
+            # Defeat / End of buffer
             if len(buffer) >= buffer_size or (len(completed) + len(failed) == len(targets)):
                 print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left)
                 if completed:
