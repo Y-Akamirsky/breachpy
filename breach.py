@@ -43,14 +43,19 @@ except ImportError:
 
 HEX_CODES = ['1C', '55', 'BD', 'E9', '7A', 'FF']
 
-# Arasaka NetSec Palette
-C_RESET = '\033[0m'
-C_RED = '\033[91m'       
-C_DARK_RED = '\033[31m'  
-C_GREEN = '\033[92m'     
-C_WHITE = '\033[97m'     
-C_USED = '\033[90m'      
-C_CURSOR = '\033[41m\033[97m\033[1m'
+# -------------------------------------------------------------
+# CUSTOM TRUECOLOR PALETTE (Kitty Theme Based)
+# -------------------------------------------------------------
+C_RESET       = '\033[0m'
+C_RED         = '\033[38;2;255;106;19m'   # color9  #ff6a13 (Main UI / Active Line)
+C_DARK_RED    = '\033[38;2;255;151;90m'   # color1  #ff975a (Inactive Matrix)
+C_GREEN       = '\033[38;2;36;212;153m'   # color10 #24d499 (Success Text)
+C_WHITE       = '\033[38;2;234;234;234m'  # color15 #eaeaea (Bright Text / Buffer)
+C_USED        = '\033[38;2;136;136;136m'  # color8  #888888 (Failed / Dimmed text)
+C_PROG_USED   = '\033[38;2;255;217;2m'    # color11 #ffd902 (Yellow - clicked byte trace)
+C_WIN_USED    = '\033[38;2;36;212;153m'   # color14 #24c9d4 (Cyan - clicked byte on win)
+# Cursor: Background color9 (#ff6a13), Foreground color15 (#eaeaea), Bold
+C_CURSOR      = '\033[48;2;255;106;19m\033[38;2;234;234;234m\033[1m'
 
 def clear_screen():
     os.system('clear' if os.name == 'posix' else 'cls')
@@ -60,15 +65,16 @@ def select_difficulty():
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
     print(f"{C_RED}║               SELECT INTRUSION LEVEL                   ║{C_RESET}")
     print(f"{C_RED}╚════════════════════════════════════════════════════════╝{C_RESET}\n")
-    print("  1. LAMER      (Easy)   [Matrix: 4x4, Buffer: 6,  Daemons: 2]")
-    print("  2. IRC MEMBER (Medium) [Matrix: 6x6, Buffer: 10, Daemons: 3]")
-    print("  3. HACKER     (Hard)   [Matrix: 8x8, Buffer: 14, Daemons: 4]\n")
+    print(f"  {C_WHITE}1. LAMER{C_RESET}      (Easy)   [Matrix: 4x4, Buffer: 6,  Daemons: 2]")
+    print(f"  {C_WHITE}2. IRC MEMBER{C_RESET} (Medium) [Matrix: 6x6, Buffer: 10, Daemons: 3]")
+    print(f"  {C_WHITE}3. HACKER{C_RESET}     (Hard)   [Matrix: 8x8, Buffer: 14, Daemons: 4]\n")
+    print(f"{C_WHITE}Press (1-3) to choose level or [Q] to quit...{C_RESET}")
     
     while True:
-        choice = input(f"{C_WHITE}Choose level (1-3) or Q to quit: {C_RESET}").strip().lower()
+        choice = get_key()
         if choice in ('1', '2', '3'):
             return int(choice)
-        if choice == 'q':
+        if choice in ('q', 'Q', '\x03'):
             sys.exit(0)
 
 def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names):
@@ -105,14 +111,13 @@ def generate_solvable_level(grid_size, buffer_size, daemon_lengths, daemon_names
             targets = {}
             invalid_sequence = False
             
-            # Выбираем случайного деймона, который гарантированно начнется с первого шага (из нулевой строки)
             anchor_daemon_idx = random.randint(0, len(daemon_names) - 1)
             
             for i, (name, length) in enumerate(zip(daemon_names, daemon_lengths)):
                 max_start = len(sequence_pool) - length
                 
                 if i == anchor_daemon_idx:
-                    start_idx = 0  # Жестко привязываем к самому первому байту (0-я строка)
+                    start_idx = 0 
                 else:
                     start_idx = random.randint(0, max_start)
                     
@@ -145,7 +150,7 @@ def get_target_status(buffer, seq, buffer_size):
         
     return 'IN_PROGRESS', overlap
 
-def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left, message=""):
+def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left, message="", is_won=False):
     clear_screen()
     print(f"{C_RED}╔════════════════════════════════════════════════════════╗{C_RESET}")
     print(f"{C_RED}║  CRITICAL SYSTEM FAULT: BREACH PROTOCOL ENGAGED        ║{C_RESET}")
@@ -176,7 +181,7 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
         else:
             status_tag = ""
 
-        print(f"  {name:<18} ->  {' '.join(rendered_seq)}{status_tag}")
+        print(f"  {C_WHITE}{name:<18}{C_RESET} ->  {' '.join(rendered_seq)}{status_tag}")
     print()
 
     buf_display = []
@@ -200,7 +205,9 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
             if is_cursor:
                 row_str.append(f"{C_CURSOR}{cell}{C_RESET}")
             elif is_used:
-                row_str.append(f"{C_USED}──{C_RESET}")
+                # В зависимости от победы/подбора красим сохраненный байт
+                trace_color = C_WIN_USED if is_won else C_PROG_USED
+                row_str.append(f"{trace_color}{cell}{C_RESET}")
             elif is_active_line:
                 row_str.append(f"{C_RED}{cell}{C_RESET}")
             else:
@@ -215,11 +222,12 @@ def print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, gri
         print("\n")
     print(f"{C_USED}[Arrows / HJKL] - Move | [Space / Enter] - Select | [R] - Reset | [Q] - Disconnect{C_RESET}")
 
+
 def main():
     if os.name == 'nt':
         os.system('')
 
-    while True:  # Global replay loop
+    while True:  
         level = select_difficulty()
         
         if level == 1:
@@ -254,12 +262,14 @@ def main():
             completed = [n for n, s in target_states.items() if s == 'COMPLETED']
             failed = [n for n, s in target_states.items() if s == 'FAILED']
 
+            # Победа
             if len(completed) == len(targets):
-                print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left)
+                print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left, is_won=True)
                 print(f"\n{C_GREEN}[ FULL ACCESS GRANTED ] All daemons successfully uploaded.{C_RESET}")
                 session_active = False
                 continue
 
+            # Поражение / Конец буфера
             if len(buffer) >= buffer_size or (len(completed) + len(failed) == len(targets)):
                 print_board(matrix, used, mode, active_idx, cursor_pos, buffer, targets, grid_size, buffer_size, reboots_left)
                 if completed:
@@ -289,7 +299,7 @@ def main():
             key = get_key()
 
             if key in ('q', 'Q', '\x03'):
-                print("\nTerminal session terminated.")
+                print(f"\n{C_RED}Terminal session terminated.{C_RESET}")
                 sys.exit(0)
 
             if key in ('r', 'R'):
@@ -331,7 +341,7 @@ def main():
                     cursor_pos = c
 
         # Post-game choice block
-        print(f"\n{C_WHITE}──────────────────────────────────────────────────────────{C_RESET}")
+        print(f"\n{C_DARK_RED}──────────────────────────────────────────────────────────{C_RESET}")
         print(f"{C_WHITE}SESSION TERMINATED. INITIALIZE NEW BREACH PROTOCOL?{C_RESET}")
         print(f"{C_USED}[Space / Enter] - New Session | [Q] - Disconnect Terminal{C_RESET}")
         
@@ -340,7 +350,7 @@ def main():
             k = get_key()
             if k in ('q', 'Q', '\x03'):
                 clear_screen()
-                print("Terminal disconnected successfully. Goodbye, netrunner.")
+                print(f"{C_GREEN}Terminal disconnected successfully. Goodbye, netrunner.{C_RESET}")
                 sys.exit(0)
             if k in (' ', '\r', '\n', 'enter', 'space'):
                 menu_choice = True
